@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from .config import Config
 from .constants import TEMPERATURE, TOP_P
 from .message import Message, msgs2dicts
+from .models import Provider
 
 if TYPE_CHECKING:
     from openai import OpenAI
@@ -21,7 +22,7 @@ openrouter_headers = {
 }
 
 
-def init(provider: str, config: Config):
+def init(provider: Provider, config: Config):
     global openai
     from openai import AzureOpenAI, OpenAI  # fmt: skip
 
@@ -42,6 +43,12 @@ def init(provider: str, config: Config):
     elif provider == "xai":
         api_key = config.get_env_required("XAI_API_KEY")
         openai = OpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
+    elif provider == "groq":
+        api_key = config.get_env_required("GROQ_API_KEY")
+        openai = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+    elif provider == "deepseek":
+        api_key = config.get_env_required("DEEPSEEK_API_KEY")
+        openai = OpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
     elif provider == "local":
         # OPENAI_API_BASE renamed to OPENAI_BASE_URL: https://github.com/openai/openai-python/issues/745
         api_base = config.get_env("OPENAI_API_BASE")
@@ -54,6 +61,23 @@ def init(provider: str, config: Config):
         raise ValueError(f"Unknown provider: {provider}")
 
     assert openai, "Provider not initialized"
+
+
+def get_provider() -> Provider | None:
+    # used when checking for provider-specific capabilities
+    if not openai:
+        return None
+    if "openai.com" in str(openai.base_url):
+        return "openai"
+    if "openrouter.ai" in str(openai.base_url):
+        return "openrouter"
+    if "groq.com" in str(openai.base_url):
+        return "groq"
+    if "x.ai" in str(openai.base_url):
+        return "xai"
+    if "deepseek.com" in str(openai.base_url):
+        return "deepseek"
+    return "local"
 
 
 def get_client() -> "OpenAI | None":
@@ -84,7 +108,7 @@ def chat(messages: list[Message], model: str) -> str:
 
     response = openai.chat.completions.create(
         model=model,
-        messages=msgs2dicts(messages, openai=True),  # type: ignore
+        messages=msgs2dicts(messages, provider=get_provider()),  # type: ignore
         temperature=TEMPERATURE if not is_o1 else NOT_GIVEN,
         top_p=TOP_P if not is_o1 else NOT_GIVEN,
         extra_headers=(
@@ -101,7 +125,7 @@ def stream(messages: list[Message], model: str) -> Generator[str, None, None]:
     stop_reason = None
     for chunk in openai.chat.completions.create(
         model=model,
-        messages=msgs2dicts(_prep_o1(messages), openai=True),  # type: ignore
+        messages=msgs2dicts(_prep_o1(messages), provider=get_provider()),  # type: ignore
         temperature=TEMPERATURE,
         top_p=TOP_P,
         stream=True,

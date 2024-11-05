@@ -7,6 +7,7 @@ When prompting, it is important to provide clear instructions and avoid any ambi
 
 import logging
 import os
+import platform
 import subprocess
 from collections.abc import Generator, Iterable
 from typing import Literal
@@ -56,6 +57,7 @@ def prompt_full(interactive: bool) -> Generator[Message, None, None]:
     if interactive:
         yield from prompt_user()
     yield from prompt_project()
+    yield from prompt_systeminfo()
 
 
 def prompt_short(interactive: bool) -> Generator[Message, None, None]:
@@ -81,7 +83,7 @@ def prompt_gptme(interactive: bool) -> Generator[Message, None, None]:
 
     base_prompt = f"""
 You are gptme v{__version__}, a general-purpose AI assistant powered by LLMs.
-You are designed to help users with programming tasks, such as writing code, debugging, and learning new concepts.
+You are designed to help users with programming tasks, such as writing code, debugging and learning new concepts.
 You can run code, execute terminal commands, and access the filesystem on the local machine.
 You will help the user with writing code, either from scratch or in existing projects.
 You will think step by step when solving a problem, in <thinking> tags.
@@ -209,7 +211,32 @@ def prompt_tools(examples: bool = True) -> Generator[Message, None, None]:
     yield Message("system", prompt.strip() + "\n\n")
 
 
+def prompt_systeminfo() -> Generator[Message, None, None]:
+    """Generate the system information prompt."""
+    if platform.system() == "Linux":
+        release_info = platform.freedesktop_os_release()
+        os_info = release_info.get("NAME", "Linux")
+        os_version = release_info.get("VERSION_ID") or release_info.get("BUILD_ID", "")
+    elif platform.system() == "Windows":
+        os_info = "Windows"
+        os_version = platform.version()
+    elif platform.system() == "Darwin":
+        os_info = "macOS"
+        os_version = platform.mac_ver()[0]
+    else:
+        os_info = "unknown"
+        os_version = ""
+
+    prompt = f"## System Information\n\n**OS:** {os_info} {os_version}".strip()
+
+    yield Message(
+        "system",
+        prompt,
+    )
+
+
 document_prompt_function(interactive=True)(prompt_gptme)
 document_prompt_function()(prompt_user)
 document_prompt_function()(prompt_project)
 document_prompt_function()(prompt_tools)
+document_prompt_function()(prompt_systeminfo)

@@ -20,6 +20,7 @@ from .interrupt import handle_keyboard_interrupt, set_interruptible
 from .logmanager import ConversationMeta, get_user_conversations
 from .message import Message
 from .prompts import get_prompt
+from .readline import add_history
 from .tools import all_tools, init_tools
 from .util import epoch_to_age, generate_name
 
@@ -192,9 +193,17 @@ def main(
                     "Failed to switch to interactive mode, continuing in non-interactive mode"
                 )
 
+    # add prompts to readline history
+    for prompt in prompts:
+        if prompt and len(prompt) > 1000:
+            # skip adding long prompts to history (slows down startup, unlikely to be useful)
+            continue
+        add_history(prompt)
+
     # join prompts, grouped by `-` if present, since that's the separator for "chained"/multiple-round prompts
     sep = "\n\n" + MULTIPROMPT_SEPARATOR
     prompts = [p.strip() for p in "\n\n".join(prompts).split(sep) if p]
+    # TODO: referenced file paths in multiprompts should be read when run, not when parsed
     prompt_msgs = [Message("user", p) for p in prompts]
 
     if resume:
@@ -285,10 +294,14 @@ def pick_log(limit=20) -> Path:  # pragma: no cover
     #     return "-test-" in name or name.startswith("test-")
     # prev_conv_files = [f for f in prev_conv_files if not is_test(f.parent.name)]
 
-    prev_convs = [
-        f"{conv.name:30s} \t{epoch_to_age(conv.modified)} \t{conv.messages:5d} msgs"
-        for conv in convs
-    ]
+    terminal_width = os.get_terminal_size().columns
+
+    prev_convs: list[str] = []
+    for conv in convs:
+        name = conv.name
+        metadata = f"{epoch_to_age(conv.modified)}  {conv.messages:4d} msgs"
+        spacing = terminal_width - len(name) - len(metadata) - 6
+        prev_convs.append(" ".join([name, spacing * " ", metadata]))
 
     options = (
         [

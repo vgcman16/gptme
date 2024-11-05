@@ -3,6 +3,7 @@ import shutil
 import sys
 from collections.abc import Iterator
 from functools import lru_cache
+from typing import cast
 
 from rich import print
 
@@ -17,8 +18,14 @@ from .llm_openai import get_client as get_openai_client
 from .llm_openai import init as init_openai
 from .llm_openai import stream as stream_openai
 from .message import Message, format_msgs, len_tokens
-from .models import MODELS, Provider, get_summary_model
+from .models import (
+    MODELS,
+    PROVIDERS_OPENAI,
+    Provider,
+    get_summary_model,
+)
 from .tools import ToolUse
+from .util import console
 
 logger = logging.getLogger(__name__)
 
@@ -27,14 +34,15 @@ def init_llm(llm: str):
     # set up API_KEY (if openai) and API_BASE (if local)
     config = get_config()
 
-    if llm in ["openai", "azure", "openrouter", "local", "xai"]:
+    llm = cast(Provider, llm)
+    if llm in PROVIDERS_OPENAI:
         init_openai(llm, config)
         assert get_openai_client()
     elif llm == "anthropic":
         init_anthropic(config)
         assert get_anthropic_client()
     else:
-        print(f"Error: Unknown LLM: {llm}")
+        console.log(f"Error: Unknown LLM: {llm}")
         sys.exit(1)
 
 
@@ -51,7 +59,7 @@ def reply(messages: list[Message], model: str, stream: bool = False) -> Message:
 
 def _chat_complete(messages: list[Message], model: str) -> str:
     provider = _client_to_provider()
-    if provider in ["openai", "azure", "openrouter"]:
+    if provider in PROVIDERS_OPENAI:
         return chat_openai(messages, model)
     elif provider == "anthropic":
         return chat_anthropic(messages, model)
@@ -61,7 +69,7 @@ def _chat_complete(messages: list[Message], model: str) -> str:
 
 def _stream(messages: list[Message], model: str) -> Iterator[str]:
     provider = _client_to_provider()
-    if provider in ["openai", "azure", "openrouter"]:
+    if provider in PROVIDERS_OPENAI:
         return stream_openai(messages, model)
     elif provider == "anthropic":
         return stream_anthropic(messages, model)
@@ -156,12 +164,17 @@ def generate_name(msgs: list[Message]) -> str:
     """
     # filter out system messages
     msgs = [m for m in msgs if m.role != "system"]
+
+    # TODO: filter out assistant messages? (only for long conversations? or always?)
+    # msgs = [m for m in msgs if m.role != "assistant"]
+
     msgs = (
         [
             Message(
                 "system",
                 """
-The following is a conversation between a user and an assistant. Which we will generate a name for.
+The following is a conversation between a user and an assistant.
+You should generate a descriptive name for it.
 
 The name should be 3-6 words describing the conversation, separated by dashes. Examples:
  - install-llama
@@ -175,7 +188,12 @@ IMPORTANT: output only the name, no preamble or postamble.
             )
         ]
         + msgs
-        + [Message("user", "Now, generate a name for this conversation.")]
+        + [
+            Message(
+                "user",
+                "That was the context of the conversation. Now, answer with a descriptive name for this conversation according to system instructions.",
+            )
+        ]
     )
     name = _chat_complete(msgs, model=get_summary_model(_client_to_provider())).strip()
     return name

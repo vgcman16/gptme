@@ -16,14 +16,42 @@ logger = logging.getLogger(__name__)
     default=None,
     help="Model to use by default, can be overridden in each request.",
 )
-def main(debug: bool, verbose: bool, model: str | None):  # pragma: no cover
+@click.option(
+    "--host",
+    default="127.0.0.1",
+    help="Host to bind the server to.",
+)
+@click.option(
+    "--port",
+    default="5000",
+    help="Port to run the server on.",
+)
+@click.option("--tools", default=None, help="Tools to enable, comma separated.")
+@click.option(
+    "--cors-origin",
+    default=None,
+    help="CORS origin to allow. Use '*' to allow all origins.",
+)
+def main(
+    debug: bool,
+    verbose: bool,
+    model: str | None,
+    host: str,
+    port: str,
+    tools: str | None,
+    cors_origin: str | None,
+):  # pragma: no cover
     """
     Starts a server and web UI for gptme.
 
     Note that this is very much a work in progress, and is not yet ready for normal use.
     """
     init_logging(verbose)
-    init(model, interactive=False, tool_allowlist=None)
+    init(
+        model,
+        interactive=False,
+        tool_allowlist=None if tools is None else tools.split(","),
+    )
 
     # if flask not installed, ask the user to install `server` extras
     try:
@@ -36,5 +64,5 @@ def main(debug: bool, verbose: bool, model: str | None):  # pragma: no cover
         exit(1)
     click.echo("Initialization complete, starting server")
 
-    app = create_app()
-    app.run(debug=debug)
+    app = create_app(cors_origin=cors_origin)
+    app.run(debug=debug, host=host, port=int(port))

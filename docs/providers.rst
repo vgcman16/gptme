@@ -10,9 +10,11 @@ To select a provider and model, run ``gptme`` with the ``--model`` flag set to `
     gptme --model openai/gpt-4o "hello"
     gptme --model anthropic "hello"  # if model part unspecified, will fall back to the provider default
     gptme --model openrouter/meta-llama/llama-3.1-70b-instruct "hello"
-    gptme --model local/ollama/llama3.2:1b "hello"
+    gptme --model local/llama3.2:1b "hello"
 
-On first startup, if `--model` is not set, and no API keys are set in the config or environment it will be prompted for. It will then auto-detect the provider, and save the key in the configuration file.
+On first startup, if ``--model`` is not set, and no API keys are set in the config or environment it will be prompted for. It will then auto-detect the provider, and save the key in the configuration file.
+
+You can persist the below environment variables in the :doc:`config` file.
 
 OpenAI
 ------
@@ -40,6 +42,24 @@ To use OpenRouter, set your API key:
 .. code-block:: sh
 
     export OPENROUTER_API_KEY="your-api-key"
+
+Groq
+----
+
+To use Groq, set your API key:
+
+.. code-block:: sh
+
+    export GROQ_API_KEY="your-api-key"
+
+xAI
+---
+
+To use xAI, set your API key:
+
+.. code-block:: sh
+
+    export XAI_API_KEY="your-api-key"
 
 Local
 -----

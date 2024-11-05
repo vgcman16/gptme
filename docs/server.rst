@@ -13,15 +13,68 @@ It can be started by running the following command:
 
     gptme-server
 
+For more CLI usage, see :ref:`the CLI documentation <cli:gptme-server>`.
+
+There are a few different interfaces available:
+
 Web UI
 ------
 
+A basic chat interface with minimal dependencies that is bundled with the server.
+
+Simply start the server to access the interface at http://localhost:5000
+
+Fancy Web UI
+------------
+
+A modern, feature-rich web interface for gptme is available as a separate project `gptme-webui <https://github.com/ErikBjare/gptme-webui>`_. It is being built with `gptengineer.app <https://gptengineer.app>`_.
+
+You can access it directly at `gptme.gptengineer.run <https://gptme.gptengineer.run>`_.
+
+To serve gptme-webui locally, see the `README <https://github.com/ErikBjare/gptme-webui>`_.
+
+Features:
+
+- Modern React-based interface with shadcn/ui
+- Streaming of responses
+- Mobile-friendly design
+- Dark mode support
+- Offline/exports support
+
+
+Computer Use Interface
+----------------------
+
+.. include:: computer-use-warning.rst
+
+The computer use interface provides a split view with a chat on the left and a desktop on the right.
+
+Requires Docker.
+
 .. code-block:: bash
 
-    gptme-server
+   # Clone the repository
+   git clone https://github.com/ErikBjare/gptme.git
+   cd gptme
+   # Build container
+   make build-docker-computer
+   # Run container
+   docker run -v ~/.config/gptme:/home/computeruse/.config/gptme -p 6080:6080 -p 8080:8080 gptme-computer:latest
 
-This should let you view your chats in a web browser and make basic requests.
+The computer use interface provides:
 
-You can then access the web UI by visiting http://localhost:5000 in your browser.
+- Combined view at http://localhost:8080/computer
+- Chat view at http://localhost:8080
+- Desktop view at http://localhost:6080/vnc.html
 
-For more usage, see :ref:`the CLI documentation <cli:gptme-server>`.
+Features:
+
+- Split view with chat on the left, desktop on the right
+- Toggle for view-only/interactive desktop mode
+- Fullscreen support
+- Automatic screen scaling for optimal LLM vision
+
+Requirements:
+
+- Docker for running the server with X11 support
+- Network ports 6080 (VNC) and 8080 (web UI) available

@@ -4,11 +4,9 @@ A simple screenshot tool, using `screencapture` on macOS and `scrot` on Linux.
 
 import os
 import subprocess
-from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
 
-from ..message import Message
 from .base import ToolSpec
 
 
@@ -19,7 +17,8 @@ def _screenshot(path: Path) -> Path:
         if os.uname().sysname == "Darwin":  # macOS
             subprocess.run(["screencapture", str(path)], check=True)
         else:  # Linux
-            subprocess.run(["scrot", "-s", str(path)], check=True)
+            # TODO: add support for specifying window/fullscreen?
+            subprocess.run(["scrot", "--overwrite", str(path)], check=True)  # --focused
     else:
         raise NotImplementedError(
             "Screenshot functionality is only available on macOS and Linux."
@@ -28,21 +27,16 @@ def _screenshot(path: Path) -> Path:
     return path
 
 
-def screenshot(path: Path | None = None) -> Generator[Message, None, None]:
+def screenshot(path: Path | None = None) -> Path:
     """
     Take a screenshot and save it to a file.
     """
     if path is None:
+        # TODO: store in log folder or tmp?
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         path = Path(f"screenshot_{timestamp}.png")
 
-    try:
-        path = _screenshot(path)
-        yield Message("system", f"Screenshot saved to: {path}")
-    except NotImplementedError as e:
-        yield Message("system", str(e))
-    except subprocess.CalledProcessError:
-        yield Message("system", "Failed to capture screenshot.")
+    return _screenshot(path)
 
 
 tool = ToolSpec(

@@ -50,7 +50,6 @@ instructions = f"""
 When you send a message containing bash code, it will be executed in a stateful bash shell.
 The shell will respond with the output of the execution.
 Do not use EOF/HereDoc syntax to send multiline commands, as the assistant will not be able to handle it.
-{'The platform is macOS.' if is_macos else ''}
 
 These programs are available, among others:
 {shell_programs_str}
@@ -236,8 +235,10 @@ def set_shell(shell: ShellSession) -> None:
     global _shell
     _shell = shell
 
-#NOTE: This does not handle control flow words like if, for, while.
+
+# NOTE: This does not handle control flow words like if, for, while.
 cmd_regex = re.compile(r"(?:^|[|&;]|\|\||&&|\n)\s*([^\s|&;]+)")
+
 
 def execute_shell(
     code: str, args: list[str], confirm: ConfirmFunc
@@ -245,8 +246,8 @@ def execute_shell(
     """Executes a shell command and returns the output."""
     shell = get_shell()
     assert not args
-    whitelist_commands = ["ls", "stat", "cd", "cat", "pwd", "echo"]
-    whitelisted = True 
+    allowlist_commands = ["ls", "stat", "cd", "cat", "pwd", "echo", "head"]
+    allowlisted = True
 
     cmd = code.strip()
     if cmd.startswith("$ "):
@@ -254,14 +255,14 @@ def execute_shell(
 
     for match in cmd_regex.finditer(cmd):
         for group in match.groups():
-            if group and group not in whitelist_commands:
-                whitelisted = False
-                break 
+            if group and group not in allowlist_commands:
+                allowlisted = False
+                break
 
-    if not whitelisted:
+    if not allowlisted:
         print_preview(cmd, "bash")
         if not confirm("Run command?"):
-            yield Message("system", "Command not run")
+            yield Message("system", "User chose not to run command.")
             return
 
     try:
@@ -272,7 +273,12 @@ def execute_shell(
     stdout = _shorten_stdout(stdout.strip(), pre_tokens=2000, post_tokens=8000)
     stderr = _shorten_stdout(stderr.strip(), pre_tokens=2000, post_tokens=2000)
 
-    msg = _format_block_smart(f"Ran {'whitelisted ' if whitelisted else ''}command", cmd, lang="bash") + "\n\n"
+    msg = (
+        _format_block_smart(
+            f"Ran {'allowlisted ' if allowlisted else ''}command", cmd, lang="bash"
+        )
+        + "\n\n"
+    )
     if stdout:
         msg += _format_block_smart("", stdout, "stdout") + "\n\n"
     if stderr:
