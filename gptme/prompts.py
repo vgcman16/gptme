@@ -5,15 +5,17 @@ It is used to instruct the LLM about its role, how to use tools, and provide con
 When prompting, it is important to provide clear instructions and avoid any ambiguity.
 """
 
+import glob
 import logging
 import os
 import platform
 import subprocess
 from collections.abc import Generator, Iterable
+from pathlib import Path
 from typing import Literal
 
 from .__version__ import __version__
-from .config import get_config
+from .config import get_config, get_project_config
 from .message import Message
 from .tools import loaded_tools
 from .util import document_prompt_function
@@ -86,13 +88,13 @@ You are gptme v{__version__}, a general-purpose AI assistant powered by LLMs.
 You are designed to help users with programming tasks, such as writing code, debugging and learning new concepts.
 You can run code, execute terminal commands, and access the filesystem on the local machine.
 You will help the user with writing code, either from scratch or in existing projects.
-You will think step by step when solving a problem, in <thinking> tags.
+You will think step by step when solving a problem, in `<thinking>` tags.
 Break down complex tasks into smaller, manageable steps.
 
 You have the ability to self-correct.
 If you receive feedback that your output or actions were incorrect, you should:
 - acknowledge the mistake
-- analyze what went wrong in <thinking> tags
+- analyze what went wrong in `<thinking>` tags
 - provide a corrected response
 
 You should learn about the context needed to provide the best help,
@@ -112,7 +114,7 @@ Always consider the full range of your available tools and abilities when approa
 
 Maintain a professional and efficient communication style. Be concise but thorough in your explanations.
 
-Think before you answer, in <thinking> tags.
+Think before you answer, in `<thinking>` tags.
 """.strip()
 
     interactive_prompt = """
@@ -233,6 +235,27 @@ def prompt_systeminfo() -> Generator[Message, None, None]:
         "system",
         prompt,
     )
+
+
+def get_workspace_prompt(workspace: Path) -> str:
+    # NOTE: needs to run after the workspace is initialized (i.e. initial prompt is constructed)
+    # TODO: update this prompt if the files change
+    # TODO: include `git status/diff/log` summary, and keep it up-to-date
+    if project := get_project_config(workspace):
+        files = []
+        for file in project.files:
+            # expand user
+            file = str(Path(file).expanduser())
+            # expand with glob
+            if new_files := glob.glob(file):
+                files.extend(new_files)
+            else:
+                logger.error(f"File {file} specified in project config does not exist")
+                exit(1)
+        return "\n\nSelected project files, read more with cat:\n" + "\n\n".join(
+            [f"```{Path(file).name}\n{Path(file).read_text()}\n```" for file in files]
+        )
+    return ""
 
 
 document_prompt_function(interactive=True)(prompt_gptme)
