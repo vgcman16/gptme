@@ -43,7 +43,7 @@ eval:
 	poetry run gptme-eval
 
 typecheck:
-	poetry run mypy --ignore-missing-imports --check-untyped-defs ${SRCDIRS} $(if $(EXCLUDES),$(foreach EXCLUDE,$(EXCLUDES),--exclude $(EXCLUDE)))
+	poetry run mypy ${SRCDIRS} $(if $(EXCLUDES),$(foreach EXCLUDE,$(EXCLUDES),--exclude $(EXCLUDE)))
 
 RUFF_ARGS=${SRCDIRS} $(foreach EXCLUDE,$(EXCLUDES),--exclude $(EXCLUDE))
 
@@ -52,7 +52,7 @@ lint:
 	! grep -r 'ToolUse("python"' ${SRCDIRS}
 	@# ruff
 	poetry run ruff check ${RUFF_ARGS}
-
+	poetry run pylint --disable=all --enable=duplicate-code gptme/
 
 format:
 	poetry run ruff check --fix-only ${RUFF_ARGS}

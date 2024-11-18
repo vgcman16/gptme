@@ -17,7 +17,6 @@ from typing import Literal
 from .__version__ import __version__
 from .config import get_config, get_project_config
 from .message import Message
-from .tools import loaded_tools
 from .util import document_prompt_function
 
 PromptType = Literal["full", "short"]
@@ -60,6 +59,7 @@ def prompt_full(interactive: bool) -> Generator[Message, None, None]:
         yield from prompt_user()
     yield from prompt_project()
     yield from prompt_systeminfo()
+    yield from prompt_timeinfo()
 
 
 def prompt_short(interactive: bool) -> Generator[Message, None, None]:
@@ -198,6 +198,8 @@ def prompt_project() -> Generator[Message, None, None]:
 
 def prompt_tools(examples: bool = True) -> Generator[Message, None, None]:
     """Generate the tools overview prompt."""
+    from .tools import loaded_tools  # fmt: skip
+
     assert loaded_tools, "No tools loaded"
     prompt = "# Tools Overview"
     for tool in loaded_tools:
@@ -235,6 +237,13 @@ def prompt_systeminfo() -> Generator[Message, None, None]:
         "system",
         prompt,
     )
+
+
+def prompt_timeinfo() -> Generator[Message, None, None]:
+    """Generate the current time prompt."""
+    # TODO: this should be updated when time changes significantly (such as when resuming a session)
+    prompt = f"## Current Time\n\n**UTC:** {subprocess.run(['date', '-u'], capture_output=True, text=True).stdout.strip()}"
+    yield Message("system", prompt)
 
 
 def get_workspace_prompt(workspace: Path) -> str:

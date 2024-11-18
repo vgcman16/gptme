@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gptme"
-version = "0.22.0"
+version = "0.23.0"
 description = "Personal AI assistant in your terminal that can use the shell, run code, edit files, browse the web, and use vision. An unconstrained local alternative to ChatGPT's Code Interpreter."
 authors = ["Erik Bjäreholt <erik@bjareho.lt>"]
 readme = "README.md"
@@ -16,7 +16,6 @@ gptme = "gptme.cli:main"
 gptme-server = "gptme.server.cli:main"
 gptme-eval = "gptme.eval.main:main"
 gptme-nc = "gptme.ncurses:main"
-ncgptme = "gptme.ncurses:main"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -59,6 +58,7 @@ flask-cors = {version = "^4.0", optional=true}
 # lint
 mypy = "*"
 ruff = "*"
+pylint = "*"
 pre-commit = "*"
 
 # test
@@ -69,6 +69,7 @@ pytest-profiling = "^1.7.0"
 pytest-dotenv = "^0.5.2"
 pytest-timeout = "^2.2.0"
 pytest-retry = "^1.6.3"
+pytest-mock = "*"
 greenlet = "*"  # dependency of playwright, but needed for coverage
 
 # docs
@@ -110,6 +111,10 @@ select = ["E4", "E7", "E9", "F", "B", "UP"]
 ignore = ["E402", "E501", "B905"]
 #fixable = ["ALL"]
 #unfixable = ["B"]
+
+[tool.mypy]
+ignore_missing_imports = true
+check_untyped_defs = true
 
 [tool.pytest.ini_options]
 markers = [
